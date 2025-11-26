@@ -1,0 +1,297 @@
+
+
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+
+#define MAX_TRANSACTIONS 100
+
+
+struct Account {
+    char name[100];
+    int accountNumber;
+    char password[50];
+    float balance;
+
+    char transactions[MAX_TRANSACTIONS][200];
+    int transactionCount;
+};
+
+
+void createAccount(struct Account accounts[], int *count);
+int login(struct Account accounts[], int count);
+void deposit(struct Account accounts[], int index);
+void withdraw(struct Account accounts[], int index);
+void transfer(struct Account accounts[], int count, int index);
+void changePassword(struct Account accounts[], int index);
+void displayDetails(struct Account accounts[], int index);
+void viewTransactions(struct Account accounts[], int index);
+int findAccountOnly(struct Account accounts[], int count, int accNo);
+void getCurrentDateTime(char *buffer, int size);
+
+
+int main() {
+    struct Account accounts[100];
+    int count = 0;
+    int choice;
+
+    
+    printf("==========================================\n");
+    printf("Online Banking System - C Programming\n");
+    printf("Author: Tenson Simulunga\n");
+    printf("Student Number: 2025015922\n");
+    printf("==========================================\n");
+
+    do {
+        printf("\n========== Main Menu ==========\n");
+        printf("1. Create Account\n");
+        printf("2. Login\n");
+        printf("3. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch(choice) {
+            case 1:
+                createAccount(accounts, &count);
+                break;
+
+            case 2: {
+                int loggedIndex = login(accounts, count);
+                if(loggedIndex != -1) {
+                    int op;
+                    do {
+                        printf("\n===== Welcome, %s =====\n", accounts[loggedIndex].name);
+                        printf("1. Deposit Funds\n");
+                        printf("2. Withdraw Funds\n");
+                        printf("3. Transfer Funds\n");
+                        printf("4. Change Password\n");
+                        printf("5. View Account Details\n");
+                        printf("6. View Transaction History\n");
+                        printf("7. Logout\n");
+                        printf("Choose option: ");
+                        scanf("%d", &op);
+
+                        switch(op) {
+                            case 1: deposit(accounts, loggedIndex); break;
+                            case 2: withdraw(accounts, loggedIndex); break;
+                            case 3: transfer(accounts, count, loggedIndex); break;
+                            case 4: changePassword(accounts, loggedIndex); break;
+                            case 5: displayDetails(accounts, loggedIndex); break;
+                            case 6: viewTransactions(accounts, loggedIndex); break;
+                            case 7: printf("Logged out successfully.\n"); break;
+                            default: printf("Invalid option.\n");
+                        }
+                    } while(op != 7);
+                }
+                break;
+            }
+
+            case 3:
+                printf("Thank you for using our banking system!\n");
+                break;
+
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+
+    } while(choice != 3);
+
+    return 0;
+}
+
+
+void getCurrentDateTime(char *buffer, int size) {
+    time_t now = time(NULL);
+    struct tm *t = localtime(&now);
+    strftime(buffer, size, "%Y-%m-%d %H:%M:%S", t);
+}
+
+
+void createAccount(struct Account accounts[], int *count) {
+    struct Account newAcc;
+    char datetime[30];
+
+    printf("\nEnter full name: ");
+    getchar();
+    fgets(newAcc.name, 100, stdin);
+    newAcc.name[strcspn(newAcc.name, "\n")] = '\0';
+
+    printf("Enter account number: ");
+    scanf("%d", &newAcc.accountNumber);
+
+    printf("Set password: ");
+    scanf("%s", newAcc.password);
+
+    printf("Enter initial deposit (ZMW): ");
+    scanf("%f", &newAcc.balance);
+
+    newAcc.transactionCount = 0;
+    getCurrentDateTime(datetime, sizeof(datetime));
+    sprintf(newAcc.transactions[newAcc.transactionCount++],
+            "[%s] Account created. Initial deposit: ZMW %.2f", datetime, newAcc.balance);
+
+    accounts[*count] = newAcc;
+    (*count)++;
+
+    printf("Account created successfully!\n");
+}
+
+
+int login(struct Account accounts[], int count) {
+    int accNo;
+    char pass[50];
+
+    printf("\nEnter account number: ");
+    scanf("%d", &accNo);
+
+    printf("Enter password: ");
+    scanf("%s", pass);
+
+    for(int i = 0; i < count; i++) {
+        if(accounts[i].accountNumber == accNo &&
+           strcmp(accounts[i].password, pass) == 0) {
+            printf("Login successful!\n");
+            return i;
+        }
+    }
+
+    printf("Invalid account number or password.\n");
+    return -1;
+}
+
+
+void deposit(struct Account accounts[], int index) {
+    float amount;
+    char datetime[30];
+
+    printf("Enter amount to deposit (ZMW): ");
+    scanf("%f", &amount);
+
+    if(amount <= 0) {
+        printf("Invalid amount.\n");
+        return;
+    }
+
+    accounts[index].balance += amount;
+    getCurrentDateTime(datetime, sizeof(datetime));
+    sprintf(accounts[index].transactions[accounts[index].transactionCount++],
+            "[%s] Deposited: ZMW %.2f | New Balance: ZMW %.2f",
+            datetime, amount, accounts[index].balance);
+
+    printf("Deposit successful! New balance: ZMW %.2f\n", accounts[index].balance);
+}
+
+
+void withdraw(struct Account accounts[], int index) {
+    float amount;
+    char datetime[30];
+
+    printf("Enter amount to withdraw (ZMW): ");
+    scanf("%f", &amount);
+
+    if(amount <= 0 || accounts[index].balance < amount) {
+        printf("Insufficient funds or invalid amount.\n");
+        return;
+    }
+
+    accounts[index].balance -= amount;
+    getCurrentDateTime(datetime, sizeof(datetime));
+    sprintf(accounts[index].transactions[accounts[index].transactionCount++],
+            "[%s] Withdrawn: ZMW %.2f | New Balance: ZMW %.2f",
+            datetime, amount, accounts[index].balance);
+
+    printf("Withdrawal successful! New balance: ZMW %.2f\n", accounts[index].balance);
+}
+
+
+int findAccountOnly(struct Account accounts[], int count, int accNo) {
+    for(int i = 0; i < count; i++)
+        if(accounts[i].accountNumber == accNo)
+            return i;
+    return -1;
+}
+
+
+void transfer(struct Account accounts[], int count, int index) {
+    int toAcc;
+    float amount;
+    char datetime[30];
+
+    printf("Enter recipient account number: ");
+    scanf("%d", &toAcc);
+
+    int recIndex = findAccountOnly(accounts, count, toAcc);
+    if(recIndex == -1) {
+        printf("Recipient account not found.\n");
+        return;
+    }
+
+    printf("Enter amount to transfer (ZMW): ");
+    scanf("%f", &amount);
+
+    if(amount <= 0 || accounts[index].balance < amount) {
+        printf("Insufficient funds.\n");
+        return;
+    }
+
+    accounts[index].balance -= amount;
+    accounts[recIndex].balance += amount;
+    getCurrentDateTime(datetime, sizeof(datetime));
+
+    sprintf(accounts[index].transactions[accounts[index].transactionCount++],
+            "[%s] Transferred ZMW %.2f to %s (Acc %d)",
+            datetime, amount, accounts[recIndex].name, accounts[recIndex].accountNumber);
+
+    sprintf(accounts[recIndex].transactions[accounts[recIndex].transactionCount++],
+            "[%s] Received ZMW %.2f from %s (Acc %d)",
+            datetime, amount, accounts[index].name, accounts[index].accountNumber);
+
+    printf("Transfer successful! Your new balance: ZMW %.2f\n", accounts[index].balance);
+}
+
+
+void changePassword(struct Account accounts[], int index) {
+    char oldPass[50], newPass[50], datetime[30];
+
+    printf("Enter current password: ");
+    scanf("%s", oldPass);
+
+    if(strcmp(oldPass, accounts[index].password) != 0) {
+        printf("Incorrect password.\n");
+        return;
+    }
+
+    printf("Enter new password: ");
+    scanf("%s", newPass);
+    strcpy(accounts[index].password, newPass);
+    getCurrentDateTime(datetime, sizeof(datetime));
+
+    sprintf(accounts[index].transactions[accounts[index].transactionCount++],
+            "[%s] Password changed.", datetime);
+
+    printf("Password changed successfully!\n");
+}
+
+
+void displayDetails(struct Account accounts[], int index) {
+    printf("\n===== Account Details =====\n");
+    printf("Name: %s\n", accounts[index].name);
+    printf("Account Number: %d\n", accounts[index].accountNumber);
+    printf("Balance: ZMW %.2f\n", accounts[index].balance);
+    printf("Password: ****** (hidden)\n");
+}
+
+
+void viewTransactions(struct Account accounts[], int index) {
+    printf("\n==== Transaction History ====\n");
+
+    if(accounts[index].transactionCount == 0) {
+        printf("No transactions available.\n");
+        return;
+    }
+
+    for(int i = 0; i < accounts[index].transactionCount; i++) {
+        printf("%d. %s\n", i + 1, accounts[index].transactions[i]);
+    }
+
+              
